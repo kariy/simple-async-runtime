@@ -15,7 +15,7 @@ use task::Task;
 use worker::Worker;
 
 pub struct Runtime {
-    executor: Worker,
+    worker: Worker,
 }
 
 impl Runtime {
@@ -25,7 +25,7 @@ impl Runtime {
         for i in 0..threads_count {
             worker.spawn(i);
         }
-        Self { executor: worker }
+        Self { worker }
     }
 
     pub fn spawn<F>(&self, fut: F) -> JoinHandle<F::Output>
@@ -34,7 +34,7 @@ impl Runtime {
         F::Output: Send,
     {
         let (task, handle) = Task::new(fut);
-        self.executor.insert_task(task);
+        self.worker.insert_task(task);
         handle
     }
 
