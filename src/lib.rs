@@ -7,12 +7,25 @@ use std::{
 };
 
 pub mod handle;
+pub mod reactor;
 pub mod task;
 pub mod worker;
 
 use handle::JoinHandle;
 use task::Task;
-use worker::Worker;
+use worker::{with_context, Worker};
+
+pub fn spawn<F>(fut: F) -> JoinHandle<F::Output>
+where
+    F: Future + Send + Sync + 'static,
+    F::Output: Send,
+{
+    with_context(|cx| {
+        let (task, handle) = Task::new(fut);
+        cx.insert_task(task);
+        handle
+    })
+}
 
 pub struct Runtime {
     worker: Worker,
@@ -74,7 +87,7 @@ impl Wake for MainWaker {
 #[cfg(test)]
 mod tests {
     use crate::Runtime;
-    // use tokio::runtime::Builder;
+    use tokio::runtime::Builder;
 
     #[test]
     fn test_runtime() {

@@ -1,5 +1,6 @@
 use parking_lot::{Condvar, Mutex};
 use std::{
+    cell::OnceCell,
     collections::VecDeque,
     sync::Arc,
     task::{Context, Wake, Waker},
@@ -7,6 +8,20 @@ use std::{
 };
 
 use crate::task::Task;
+
+thread_local! {
+    static WORKER: OnceCell<Worker> = OnceCell::new()
+}
+
+pub(crate) fn with_context<F, R>(f: F) -> R
+where
+    F: FnOnce(&Worker) -> R,
+{
+    WORKER.with(|worker| {
+        let worker = worker.get().expect("outside of runtime context");
+        f(worker)
+    })
+}
 
 #[derive(Default, Clone)]
 pub struct Worker {
